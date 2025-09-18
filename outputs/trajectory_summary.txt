@@ -1,0 +1,4 @@
+Total frames: 299
+Total path length: 105.41 m
+Total time: 29.9 s
+Average speed: 3.53 m/s
