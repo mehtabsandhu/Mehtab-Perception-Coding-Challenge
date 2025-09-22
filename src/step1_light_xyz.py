@@ -50,11 +50,10 @@ def robust_xyz_at(points_hw3: np.ndarray, u: int, v: int, patch_sizes=(3,5,9,13)
             return np.median(vals, axis=0)
     return None
 
-def extract_all_xyz(save_csv="outputs/light_xyz_cam.csv", max_frames=None) -> pd.DataFrame:
+def extract_object_xyz(bbox_csv, save_csv, max_frames=None) -> pd.DataFrame:
     os.makedirs("outputs", exist_ok=True)
-    bboxes = pd.read_csv(BBOX_CSV)
+    bboxes = pd.read_csv(bbox_csv)
 
-    # If frame starts at 1 in CSV, keep as-is; we’ll trust CSV ordering
     if max_frames is not None:
         bboxes = bboxes.sort_values("frame").head(max_frames)
 
@@ -74,7 +73,7 @@ def extract_all_xyz(save_csv="outputs/light_xyz_cam.csv", max_frames=None) -> pd
     df.to_csv(save_csv, index=False)
     return df
 
+
 if __name__ == "__main__":
-    df = extract_all_xyz()
-    print(df.head())
-    print(f"Saved to outputs/light_xyz_cam.csv with {df['ok'].sum()} valid / {len(df)} total")
+    extract_object_xyz("dataset/bbox_light.csv", "outputs/light_xyz_cam.csv")
+    extract_object_xyz("dataset/bbox_cart.csv", "outputs/cart_xyz_cam.csv")

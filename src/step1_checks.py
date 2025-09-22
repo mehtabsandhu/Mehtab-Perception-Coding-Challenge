@@ -5,10 +5,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-CSV = "outputs/light_xyz_cam.csv"
-BBOX_CSV = "dataset/bbox_light.csv"
-RGB_DIR = "dataset/rgb"
-
 def plot_distance_time(df: pd.DataFrame, out="outputs/light_distance_vs_frame.png"):
     df = df.copy()
     df["dist_m"] = np.sqrt(df["X"]**2 + df["Y"]**2 + df["Z"]**2)
@@ -21,14 +17,14 @@ def plot_distance_time(df: pd.DataFrame, out="outputs/light_distance_vs_frame.pn
     plt.tight_layout()
     plt.savefig(out); plt.close()
 
-def overlay_bboxes(sample_n=8, out="outputs/bbox_overlays.png"):
-    b = pd.read_csv(BBOX_CSV).sort_values("frame")
+def overlay_bboxes(bbox_csv, rgb_dir, sample_n=8, out="outputs/bbox_overlays.png"):
+    b = pd.read_csv(bbox_csv).sort_values("frame")
     ids = np.linspace(0, len(b)-1, num=min(sample_n, len(b)), dtype=int)
     tiles = []
     for idx in ids:
         row = b.iloc[idx]
         fid = int(row["frame"])
-        path = os.path.join(RGB_DIR, f"left{fid:06d}.png")
+        path = os.path.join(rgb_dir, f"left{fid:06d}.png")
         img = cv2.imread(path)
         if img is None: continue
         x1,y1,x2,y2 = map(int, [row.x1, row.y1, row.x2, row.y2])
@@ -54,29 +50,31 @@ def scatter_xyz(df: pd.DataFrame, out="outputs/light_xyz_scatter.png"):
     plt.axis("equal"); plt.grid(True)
     plt.tight_layout(); plt.savefig(out); plt.close()
 
-def run_all_checks():
+def run_all_checks(csv_path, label="Object", bbox_csv=None, rgb_dir="dataset/rgb"):
     os.makedirs("outputs", exist_ok=True)
-    df = pd.read_csv(CSV)
+    df = pd.read_csv(csv_path)
+
     # 1) Basic stats
     ok_rate = (df["ok"]==1).mean()
-    print(f"Valid fraction: {ok_rate:.1%}")
+    print(f"[{label}] Valid fraction: {ok_rate:.1%}")
     print(df[["X","Y","Z"]].describe())
 
     # 2) Distance vs frame
-    plot_distance_time(df)
+    plot_distance_time(df, out=f"outputs/{label.lower().replace(' ','_')}_dist_vs_frame.png")
 
-    # 3) Overlay bbox centers on a montage
-    overlay_bboxes()
+    # 3) Overlay bbox centers (optional: only if bbox_csv provided)
+    if bbox_csv is not None:
+        overlay_bboxes(bbox_csv, rgb_dir, out=f"outputs/{label.lower().replace(' ','_')}_bbox_overlays.png")
 
     # 4) XY scatter in camera frame
-    scatter_xyz(df)
+    scatter_xyz(df, out=f"outputs/{label.lower().replace(' ','_')}_xyz_scatter.png")
 
-    # 5) Print first few XYZ values with distances
+    # 5) Print preview
     preview = df.head()
     preview = preview.assign(
         dist_m=np.sqrt(preview["X"]**2 + preview["Y"]**2 + preview["Z"]**2)
     )
-    print("\nFirst 5 extracted traffic light positions (camera frame):")
+    print(f"\nFirst 5 extracted {label} positions (camera frame):")
     print(preview[["frame","X","Y","Z","dist_m"]])
 
 if __name__ == "__main__":
